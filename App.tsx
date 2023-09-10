@@ -21,17 +21,14 @@ import {
   View,
   LogBox,
   Button,
+  FlatList,
+  TouchableOpacity,
 } from 'react-native';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+import { Colors } from 'react-native/Libraries/NewAppScreen';
 
 import { BleManager, Device } from 'react-native-ble-plx';
+import BluetoothClassic, { BluetoothDevice } from 'react-native-bluetooth-classic';
 
 import { GetPermissions } from '@src/components/permissions/GetPermissions';
 
@@ -72,83 +69,146 @@ function Section({children, title}: SectionProps): JSX.Element {
 function App(): JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
   const [arePermissionsGranted, setArePermissionsGranted] = useState(false);
+  const [pairedDevices, setPairedDevices] = useState<BluetoothDevice[] | undefined>();
+  const [connectedDevice, setConnectedDevice] = useState<BluetoothDevice | undefined>();
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
-  // const checkForBTPermissions = useCallback(() => {
-  //   if (Platform.OS === 'android' && Platform.Version >= 23) {
-  //     const finalPermissions =
-  //       Platform.Version >= 29
-  //         ? PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-  //         : PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION;
-  //     PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION).then(permissionCheckResult => {
-  //       if (permissionCheckResult) {
-  //         console.log(
-  //           '🚀 ~ file: App.tsx:79 ~ permissionCheckResult:',
-  //           permissionCheckResult,
-  //         );
-  //         // enableBTInDevice()
-  //       } else {
-  //         PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION).then(
-  //           nestedPermissionCheckResult => {
-  //             if (nestedPermissionCheckResult) {
-  //               console.log(
-  //                 '🚀 ~ file: App.tsx:84 ~ nestedPermissionCheckResult:',
-  //                 nestedPermissionCheckResult,
-  //               );
-  //               // enable
-  //             } else {
-  //               console.log(
-  //                 '🚀 ~ file: App.tsx:83 ~ PermissionsAndroid.check ~ user refused permissions',
-  //               );
-  //             }
-  //           },
-  //         );
-  //       }
-  //     });
-  //   } else {
-  //     console.log('🚀 ~ file: App.tsx:103 ~ On iOS');
-  //   }
-  // }, []);
-
-  // const isBluetoothEnabled = useCallback(async () => {
-  //   try {
-  //     const bluetoothState = await BluetoothSerial.isEnabled();
-  //   }
-  // }, []);
+  useEffect(() => {
+    BluetoothClassic.onBluetoothDisabled((event) => {
+      console.log("🚀 ~ file: App.tsx:87 ~ BluetoothClassic.onBluetoothDisabled ~ event:", event)
+      setConnectedDevice(undefined);
+    });
+  }, []);
 
   useEffect(() => {
-    // checkForBluetoothPermissionsUsingModule();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (connectedDevice) {
+      connectedDevice.onDataReceived(({ data, timestamp, eventType }) => {
+        console.log("🚀 ~ connectedDevice?.onDataReceived ~ data:", timestamp, data, eventType);
+      });
+    }
+  }, [connectedDevice]);
+
+  const listenToRead = useCallback(async () => {
+    let timeoutId: NodeJS.Timeout | undefined;
+
+    if (connectedDevice) {
+      timeoutId = setInterval(async () => {
+        const readData = await connectedDevice.read();
+        console.log("🚀 ~ readData:", readData);
+      }, 1000);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [connectedDevice]);
+
+  const getPairedDevices = useCallback(async () => {
+    try {
+      const pairedBtDevices = await BluetoothClassic.getBondedDevices();
+      console.log("🚀 ~ file: App.tsx:90 ~ getPairedDevices ~ pairedDevices:", pairedBtDevices);
+      setPairedDevices(pairedBtDevices);
+    } catch (e) {
+      console.log("🚀 ~ file: App.tsx:93 ~ getPairedDevices ~ e:", e)
+    }
+  }, [setPairedDevices]);
+
+  const attemptConnectingToDevice = useCallback(async (device: BluetoothDevice) => {
+    const isAlreadyConnectedToDevice = await device.isConnected();
+    let isConnectionSuccessful = false;
+
+    if (isAlreadyConnectedToDevice) {
+      console.log("🚀 ~ file: App.tsx:107 ~ attemptConnectingToDevice ~ isAlreadyConnectedToDevice:", isAlreadyConnectedToDevice);
+      return;
+    }
+    try {
+      isConnectionSuccessful = await device.connect();
+      console.log("🚀 ~ file: App.tsx:114 ~ attemptConnectingToDevice ~ isConnectionSuccessful:", isConnectionSuccessful);
+      if (isConnectionSuccessful) {
+        setConnectedDevice(device);
+      }
+    } catch (e) {
+      console.log("🚀 ~ file: App.tsx:108 ~ attemptConnectingToDevice ~ e:", e);
+    }
+  }, [setConnectedDevice]);
+
+  const disconnectFromDevice = useCallback(async (device: BluetoothDevice) => {
+    const isAlreadyConnectedToDevice = await device.isConnected();
+    let isDisconnectionSuccessful = false;
+
+    if (!isAlreadyConnectedToDevice) {
+      return;
+    }
+    try {
+      isDisconnectionSuccessful = await device.disconnect();
+      console.log("🚀 ~ file: App.tsx:132 ~ disconnectFromDevice ~ isDisconnectionSuccessful:", isDisconnectionSuccessful);
+      if (isDisconnectionSuccessful) {
+        setConnectedDevice(undefined);
+      }
+    } catch (e) {
+      console.log("🚀 ~ file: App.tsx:134 ~ disconnectFromDevice ~ e:", e);
+    }
+  }, [setConnectedDevice]);
 
   return (
     <SafeAreaView style={backgroundStyle}>
-      <StatusBar
+      {/* <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <GetPermissions arePermissionsGranted={arePermissionsGranted} setArePermissionsGranted={setArePermissionsGranted} />
-        </View>
-      </ScrollView>
+      /> */}
+      <View style={backgroundStyle}>
+        <GetPermissions arePermissionsGranted={arePermissionsGranted} setArePermissionsGranted={setArePermissionsGranted} />
+
+        <Button title="Show paired devices" onPress={getPairedDevices} />
+
+        {pairedDevices?.length && !connectedDevice
+          ? (
+            <FlatList
+              data={pairedDevices}
+              keyExtractor={pairedDevice => pairedDevice.id}
+              renderItem={({ item, ...rest }) => (
+                <TouchableOpacity onPress={() => attemptConnectingToDevice(item)} style={styles.discoveredDeviceItem}>
+                  <Text>{item.name}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          )
+          : <View>
+              <Text>
+                {connectedDevice
+                  ? ''
+                  : 'No paired devices found! Try pairing and searching for them'
+                }
+              </Text>
+            </View>
+        }
+
+        {connectedDevice
+          ? (
+            <View>
+              <Text>Connected to {connectedDevice.name}</Text>
+              <Button title="Disconnect" onPress={() => disconnectFromDevice(connectedDevice)} />
+              <Button title="Keep reading data (debug)" onPress={() => listenToRead(connectedDevice)} />
+            </View>
+            )
+          : null
+        }
+
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  discoveredDeviceItem: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
   sectionContainer: {
     marginTop: 32,
     paddingHorizontal: 24,
@@ -161,9 +221,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 18,
     fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
   },
 });
 

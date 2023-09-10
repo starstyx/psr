@@ -14,7 +14,7 @@ type Props = {
 export const GetPermissions = ({ arePermissionsGranted, setArePermissionsGranted }: Props): JSX.Element => {
   const checkForBluetoothPermissionsUsingModule = useCallback(async () => {
     try {
-      const status = await requestMultiple([
+       const status = await requestMultiple([
         PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
         PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
         PERMISSIONS.ANDROID.BLUETOOTH_ADVERTISE,

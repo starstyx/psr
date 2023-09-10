@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Sample React Native App
  * https://github.com/facebook/react-native
@@ -5,9 +6,12 @@
  * @format
  */
 
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import type {PropsWithChildren} from 'react';
 import {
+  Alert,
+  PermissionsAndroid,
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -15,6 +19,8 @@ import {
   Text,
   useColorScheme,
   View,
+  LogBox,
+  Button,
 } from 'react-native';
 
 import {
@@ -25,9 +31,17 @@ import {
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
 
+import { BleManager, Device } from 'react-native-ble-plx';
+
+import { GetPermissions } from '@src/components/permissions/GetPermissions';
+
 type SectionProps = PropsWithChildren<{
   title: string;
 }>;
+
+export const manager = new BleManager();
+
+LogBox.ignoreLogs(['new NativeEventEmitter']);
 
 function Section({children, title}: SectionProps): JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
@@ -57,10 +71,58 @@ function Section({children, title}: SectionProps): JSX.Element {
 
 function App(): JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
+  const [arePermissionsGranted, setArePermissionsGranted] = useState(false);
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
+
+  // const checkForBTPermissions = useCallback(() => {
+  //   if (Platform.OS === 'android' && Platform.Version >= 23) {
+  //     const finalPermissions =
+  //       Platform.Version >= 29
+  //         ? PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+  //         : PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION;
+  //     PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION).then(permissionCheckResult => {
+  //       if (permissionCheckResult) {
+  //         console.log(
+  //           '🚀 ~ file: App.tsx:79 ~ permissionCheckResult:',
+  //           permissionCheckResult,
+  //         );
+  //         // enableBTInDevice()
+  //       } else {
+  //         PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION).then(
+  //           nestedPermissionCheckResult => {
+  //             if (nestedPermissionCheckResult) {
+  //               console.log(
+  //                 '🚀 ~ file: App.tsx:84 ~ nestedPermissionCheckResult:',
+  //                 nestedPermissionCheckResult,
+  //               );
+  //               // enable
+  //             } else {
+  //               console.log(
+  //                 '🚀 ~ file: App.tsx:83 ~ PermissionsAndroid.check ~ user refused permissions',
+  //               );
+  //             }
+  //           },
+  //         );
+  //       }
+  //     });
+  //   } else {
+  //     console.log('🚀 ~ file: App.tsx:103 ~ On iOS');
+  //   }
+  // }, []);
+
+  // const isBluetoothEnabled = useCallback(async () => {
+  //   try {
+  //     const bluetoothState = await BluetoothSerial.isEnabled();
+  //   }
+  // }, []);
+
+  useEffect(() => {
+    // checkForBluetoothPermissionsUsingModule();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <SafeAreaView style={backgroundStyle}>
@@ -76,20 +138,10 @@ function App(): JSX.Element {
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
           <Section title="Learn More">
             Read the docs to discover what to do next:
           </Section>
-          <LearnMoreLinks />
+          <GetPermissions arePermissionsGranted={arePermissionsGranted} setArePermissionsGranted={setArePermissionsGranted} />
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -78,18 +78,29 @@ function App(): JSX.Element {
 
   useEffect(() => {
     BluetoothClassic.onBluetoothDisabled((event) => {
-      console.log("🚀 ~ file: App.tsx:87 ~ BluetoothClassic.onBluetoothDisabled ~ event:", event)
+      console.log("🚀 ~ file: App.tsx:87 ~ BluetoothClassic.onBluetoothDisabled ~ event:", event);
       setConnectedDevice(undefined);
     });
+
+    BluetoothClassic.onBluetoothEnabled((event) => {
+      console.log("🚀 ~ file: App.tsx:87 ~ BluetoothClassic.onBluetoothEnabled ~ event:", event);
+    });
+
+    BluetoothClassic.onError(err => {
+      console.log("🚀 ~ file: App.tsx:90 ~ useEffect ~ err:", err);
+    });
+
+    // BluetoothClassic.onDeviceRead()
   }, []);
 
-  useEffect(() => {
-    if (connectedDevice) {
-      connectedDevice.onDataReceived(({ data, timestamp, eventType }) => {
-        console.log("🚀 ~ connectedDevice?.onDataReceived ~ data:", timestamp, data, eventType);
-      });
-    }
-  }, [connectedDevice]);
+  // useEffect(() => {
+  //   if (connectedDevice) {
+  //     console.log("🚀 ~ file: App.tsx:98 ~ useEffect ~ connectedDevice:", connectedDevice);
+  //     connectedDevice.onDataReceived(({ data, timestamp, eventType }) => {
+  //       console.log("🚀 ~ connectedDevice?.onDataReceived ~ data:", timestamp, data, eventType);
+  //     });
+  //   }
+  // }, [connectedDevice]);
 
   const listenToRead = useCallback(async () => {
     let timeoutId: NodeJS.Timeout | undefined;
@@ -129,8 +140,12 @@ function App(): JSX.Element {
     try {
       isConnectionSuccessful = await device.connect();
       console.log("🚀 ~ file: App.tsx:114 ~ attemptConnectingToDevice ~ isConnectionSuccessful:", isConnectionSuccessful);
+      console.log("🚀 ~ file: App.tsx:144 ~ attemptConnectingToDevice ~ device:", device);
       if (isConnectionSuccessful) {
         setConnectedDevice(device);
+        device.onDataReceived(receivedData => {
+          console.log("🚀 ~ file: App.tsx:148 ~ attemptConnectingToDevice ~ receivedData:", receivedData);
+        });
       }
     } catch (e) {
       console.log("🚀 ~ file: App.tsx:108 ~ attemptConnectingToDevice ~ e:", e);
@@ -193,7 +208,7 @@ function App(): JSX.Element {
             <View>
               <Text>Connected to {connectedDevice.name}</Text>
               <Button title="Disconnect" onPress={() => disconnectFromDevice(connectedDevice)} />
-              <Button title="Keep reading data (debug)" onPress={() => listenToRead(connectedDevice)} />
+              <Button title="Keep reading data (debug)" onPress={() => listenToRead()} />
             </View>
             )
           : null
@@ -207,7 +222,7 @@ function App(): JSX.Element {
 const styles = StyleSheet.create({
   discoveredDeviceItem: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 12,
   },
   sectionContainer: {
     marginTop: 32,

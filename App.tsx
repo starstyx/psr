@@ -30,10 +30,6 @@ import { BleManager, Device } from 'react-native-ble-plx';
 import { BluetoothStateProvider } from '@src/contexts/bluetoothState';
 import { One } from '@src/components/demoScreen/One';
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
 export const manager = new BleManager();
 
 LogBox.ignoreLogs(['new NativeEventEmitter']);
